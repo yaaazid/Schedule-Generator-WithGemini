@@ -185,6 +185,10 @@ class _PreferencesSheetState extends State<PreferencesSheet> {
             controller: _notesCtrl,
             maxLines: 2,
             textCapitalization: TextCapitalization.sentences,
+            style: const TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 14,
+            ),
             decoration: const InputDecoration(
               labelText: 'Catatan untuk AI (opsional)',
               hintText: 'Misal: saya lebih produktif di pagi hari...',

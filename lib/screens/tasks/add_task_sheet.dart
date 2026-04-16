@@ -91,7 +91,6 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
               autofocus: !_isEditing,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                fillColor: Colors.black,
                 labelText: 'Nama tugas',
                 hintText: 'Contoh: Review laporan bulanan',
               ),
@@ -307,6 +306,10 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
               controller: _notesCtrl,
               maxLines: 2,
               textCapitalization: TextCapitalization.sentences,
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 14,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Catatan (opsional)',
                 hintText: 'Info tambahan tentang tugas ini...',

@@ -106,6 +106,15 @@ class AppTheme {
         ),
         iconTheme: const IconThemeData(color: textPrimary, size: 22),
       ),
+      cardTheme: CardThemeData(
+        color: backgroundPrimary,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: borderLight, width: 0.5),
+        ),
+        margin: EdgeInsets.zero,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: backgroundPrimary,
@@ -127,6 +136,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: priorityHigh, width: 1),
         ),
+        // Penting: warna teks yang diketik user harus eksplisit
         labelStyle: GoogleFonts.dmSans(
           fontSize: 14,
           color: textSecondary,
@@ -134,6 +144,11 @@ class AppTheme {
         hintStyle: GoogleFonts.dmSans(
           fontSize: 14,
           color: textTertiary,
+        ),
+        // Warna teks input saat tidak fokus dan fokus
+        floatingLabelStyle: GoogleFonts.dmSans(
+          fontSize: 14,
+          color: primaryGreen,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -237,6 +252,15 @@ class AppTheme {
           fontWeight: FontWeight.w400,
           color: Colors.white,
         ),
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1C1C1A),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Color(0xFF2C2C2A), width: 0.5),
+        ),
+        margin: EdgeInsets.zero,
       ),
     );
   }

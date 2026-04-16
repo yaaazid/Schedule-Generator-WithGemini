@@ -4,7 +4,8 @@ import '../models/task_model.dart';
 import '../models/schedule_model.dart';
 
 class AIScheduleService {
-  static const String _model = 'gemini-2.0-flash';
+  // gemini-1.5-flash has more generous free tier quota than gemini-2.0-flash
+  static const String _model = 'gemini-1.5-flash';
 
   // IMPORTANT: In production, store API key securely (e.g., env vars, backend proxy)
   // Never hardcode API keys in production apps
@@ -127,77 +128,134 @@ Balas HANYA dengan JSON valid tanpa markdown:
   ]
 }''';
 
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt}
-            ]
+    for (int attempt = 0; attempt <= 2; attempt++) {
+      try {
+        final response = await http.post(
+          Uri.parse(_baseUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'contents': [
+              {
+                'parts': [
+                  {'text': prompt}
+                ]
+              }
+            ],
+            'generationConfig': {
+              'temperature': 0.7,
+              'maxOutputTokens': 4000,
+            },
+          }),
+        );
+
+        if (response.statusCode == 429) {
+          if (attempt < 2) {
+            await Future.delayed(Duration(seconds: (attempt + 1) * 5));
+            continue;
           }
-        ],
-        'generationConfig': {
-          'temperature': 0.7,
-          'maxOutputTokens': 4000,
-        },
-      }),
-    );
+          throw AIServiceException(
+            'Batas kuota Gemini API tercapai. Coba lagi dalam beberapa menit.',
+          );
+        }
 
-    if (response.statusCode != 200) {
-      throw AIServiceException(
-          'API Error ${response.statusCode}: ${response.body}');
+        if (response.statusCode != 200) {
+          throw AIServiceException(
+              'API Error ${response.statusCode}: ${response.body}');
+        }
+
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final rawText =
+            data['candidates'][0]['content']['parts'][0]['text'] as String;
+        final cleanJson = rawText.replaceAll(RegExp(r'```json|```'), '').trim();
+        final parsed = jsonDecode(cleanJson) as Map<String, dynamic>;
+
+        final days = (parsed['days'] as List<dynamic>).map((d) {
+          final dayMap = d as Map<String, dynamic>;
+          final date = DateTime.parse(dayMap['date'] as String);
+          return DaySchedule.fromJson(dayMap, date);
+        }).toList();
+
+        return WeekSchedule(
+          days: days,
+          weeklySummary: parsed['weeklySummary'] as String? ?? '',
+        );
+      } on AIServiceException {
+        rethrow;
+      } catch (e) {
+        if (attempt < 2) {
+          await Future.delayed(Duration(seconds: (attempt + 1) * 3));
+          continue;
+        }
+        throw AIServiceException(
+            'Gagal terhubung ke Gemini API: ${e.toString()}');
+      }
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final rawText = data['candidates'][0]['content']['parts'][0]['text'] as String;
-    final cleanJson = rawText.replaceAll(RegExp(r'```json|```'), '').trim();
-    final parsed = jsonDecode(cleanJson) as Map<String, dynamic>;
-
-    final days = (parsed['days'] as List<dynamic>).map((d) {
-      final dayMap = d as Map<String, dynamic>;
-      final date = DateTime.parse(dayMap['date'] as String);
-      return DaySchedule.fromJson(dayMap, date);
-    }).toList();
-
-    return WeekSchedule(
-      days: days,
-      weeklySummary: parsed['weeklySummary'] as String? ?? '',
-    );
+    throw AIServiceException('Gagal setelah beberapa percobaan.');
   }
 
   Future<DaySchedule> _callAPI(String prompt, DateTime date) async {
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt}
-            ]
+    return _callWithRetry(prompt, date, maxRetries: 2);
+  }
+
+  Future<DaySchedule> _callWithRetry(String prompt, DateTime date,
+      {int maxRetries = 2}) async {
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        final response = await http.post(
+          Uri.parse(_baseUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'contents': [
+              {
+                'parts': [
+                  {'text': prompt}
+                ]
+              }
+            ],
+            'generationConfig': {
+              'temperature': 0.7,
+              'maxOutputTokens': 2000,
+            },
+          }),
+        );
+
+        if (response.statusCode == 429) {
+          if (attempt < maxRetries) {
+            // Wait before retry: 5s, 10s
+            await Future.delayed(Duration(seconds: (attempt + 1) * 5));
+            continue;
           }
-        ],
-        'generationConfig': {
-          'temperature': 0.7,
-          'maxOutputTokens': 2000,
-        },
-      }),
-    );
+          throw AIServiceException(
+            'Batas kuota Gemini API tercapai. Coba lagi dalam beberapa menit, '
+            'atau upgrade ke Gemini API berbayar di aistudio.google.com.',
+          );
+        }
 
-    if (response.statusCode != 200) {
-      throw AIServiceException(
-          'API Error ${response.statusCode}: ${response.body}');
+        if (response.statusCode != 200) {
+          throw AIServiceException(
+              'API Error ${response.statusCode}: ${response.body}');
+        }
+
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final rawText =
+            data['candidates'][0]['content']['parts'][0]['text'] as String;
+        final cleanJson =
+            rawText.replaceAll(RegExp(r'```json|```'), '').trim();
+        final parsed = jsonDecode(cleanJson) as Map<String, dynamic>;
+
+        return DaySchedule.fromJson(parsed, date);
+      } on AIServiceException {
+        rethrow;
+      } catch (e) {
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(seconds: (attempt + 1) * 3));
+          continue;
+        }
+        throw AIServiceException(
+            'Gagal terhubung ke Gemini API: ${e.toString()}');
+      }
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final rawText =
-        data['candidates'][0]['content']['parts'][0]['text'] as String;
-    final cleanJson = rawText.replaceAll(RegExp(r'```json|```'), '').trim();
-    final parsed = jsonDecode(cleanJson) as Map<String, dynamic>;
-
-    return DaySchedule.fromJson(parsed, date);
+    throw AIServiceException('Gagal setelah beberapa percobaan.');
   }
 
   String _formatDate(DateTime date) {

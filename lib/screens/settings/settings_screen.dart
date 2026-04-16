@@ -87,6 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: const TextStyle(
                           fontSize: 14,
                           fontFamily: 'monospace',
+                          color: AppTheme.textPrimary,
                         ),
                         decoration: InputDecoration(
                           labelText: 'Google Gemini API Key',
@@ -164,9 +165,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Tentang Aplikasi',
             children: [
               _buildInfoRow('Versi', '1.0.0'),
-              _buildInfoRow('Model AI', 'Gemini 2.0 Flash (Google)'),
+              _buildInfoRow('Model AI', 'Gemini 1.5 Flash (Google)'),
               _buildInfoRow('Framework', 'Flutter'),
-              _buildInfoRow('Developer', 'SKL #2 Project'),
+              _buildInfoRow('Developer', 'Yazed Troya'),
             ],
           ),
           const SizedBox(height: 16),
